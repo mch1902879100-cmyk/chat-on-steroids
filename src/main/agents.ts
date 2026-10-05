@@ -1828,6 +1828,7 @@ export function spawn(input: SpawnInput, options: SpawnOptions = {}): SpawnResul
 
   const observedModels = getChatModels().models;
   const defaultNotes = new Set<string>();
+  const apiWorkerBackend = (getConfig().multiAgent.workerBackend ?? 'chatgpt') === 'api';
   const planned = input.workers.map((worker, index) => {
     const task = worker.task.trim();
     if (!task) throw new AgentError(`Worker ${index + 1} has no task. Every worker needs one.`);
@@ -1836,12 +1837,14 @@ export function spawn(input: SpawnInput, options: SpawnOptions = {}): SpawnResul
     if (label.length > MAX_LABEL_CHARS) {
       throw new AgentError(`Worker ${index + 1}'s label is too long (limit ${MAX_LABEL_CHARS} characters)`);
     }
-    const requested = usableDefaults(
-      normalizeModel(index, worker.model === undefined ? getConfig().multiAgent.defaultModel : worker.model),
-      normalizeReasoningEffort(index, worker.reasoning_effort === undefined ? getConfig().multiAgent.defaultReasoning : worker.reasoning_effort),
-      worker.model === undefined, worker.reasoning_effort === undefined, observedModels, defaultNotes);
+    const requested = apiWorkerBackend
+      ? { model: null, effort: null }
+      : usableDefaults(
+          normalizeModel(index, worker.model === undefined ? getConfig().multiAgent.defaultModel : worker.model),
+          normalizeReasoningEffort(index, worker.reasoning_effort === undefined ? getConfig().multiAgent.defaultReasoning : worker.reasoning_effort),
+          worker.model === undefined, worker.reasoning_effort === undefined, observedModels, defaultNotes);
     const model = requested.model, reasoningEffort = requested.effort;
-    validateWorkerModel(index, model, reasoningEffort, observedModels);
+    if (!apiWorkerBackend) validateWorkerModel(index, model, reasoningEffort, observedModels);
     // Composed once, here, and stored as *the* task. Everything downstream — the bootstrap
     // the browser types, the repeated-spawn match, the status table, the snapshot — then
     // sees the same single string a worker actually receives, with no second field to keep
@@ -2978,6 +2981,45 @@ export function finishAgent(caller: Caller, result: string): FinishResult {
   const planned = planFinish(agent, result);
   publishFinish(agent, planned.info, planned.report, 'critical');
   return { info: { ...agent.info }, report: { ...planned.report }, repeat: false };
+}
+
+/**
+ * Completes an app-owned API worker.
+ *
+ * Browser workers normally sleep after a turn so their ChatGPT conversation can be reused.
+ * An API worker has no reusable browser conversation, so one API assignment is intentionally
+ * one-shot: publish its result, free the slot, and leave ChatGPT-backed workers available as
+ * the fallback backend for later work.
+ */
+export function finishApiWorker(id: string, result: string, runId?: string): FinishResult | null {
+  const run = scopedRun(runId);
+  const agent = run?.agents.get(id);
+  if (!run || !agent || agent.info.role !== 'worker' || isOver(agent.info.state)) return null;
+  if (activeFinishStages.has(agent)) return null;
+  const text = result.trim().slice(0, MAX_MESSAGE_CHARS) || 'API worker completed without a text report.';
+  const now = Date.now();
+  agent.info.state = 'finished';
+  agent.info.finishedAt = now;
+  agent.info.sleptAt = null;
+  agent.info.detachedAt = null;
+  agent.info.result = text;
+  agent.info.revivable = false;
+  agent.info.silenceParked = false;
+  agent.info.silenceRecoveryTurnId = null;
+  agent.info.silenceRecoveryRequestOriginMax = null;
+  agent.queue = [];
+  recount(agent);
+  const report = newMessage(
+    id,
+    PRIME_ID,
+    `[${id} finished] ${text}\n(${id} ran on the API worker backend; its worker slot is free.)`
+  );
+  const prime = primeAgent(run);
+  prime.queue.push(report);
+  recount(prime);
+  logInfo(`multi-agent: ${id} finished on API worker backend`);
+  changed('critical');
+  return { info: { ...agent.info }, report: { ...report }, repeat: false };
 }
 
 /**

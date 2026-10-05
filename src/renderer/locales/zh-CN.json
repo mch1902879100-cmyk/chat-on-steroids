@@ -1984,5 +1984,10 @@
   "The tunnel disconnected unexpectedly. Open Chat On Steroids to check the connection.": "隧道连接意外断开。请打开 Chat On Steroids 检查连接。",
   "Copy link": "复制链接",
   "Copy this chat's ChatGPT link": "复制此对话的 ChatGPT 链接",
-  "Link copied": "链接已复制"
+  "Link copied": "链接已复制",
+  "Sub-agent backend": "子代理后端",
+  "API workers use the configured Goal provider and model; they do not open ChatGPT tabs. If a provider call fails, the worker stops without switching providers.": "API 子代理使用已配置的 Goal 提供商和模型，不会打开 ChatGPT 标签页。提供商调用失败时，子代理会停止，不会切换到其他提供商。",
+  "ChatGPT tabs": "ChatGPT 标签页",
+  "Needs the browser extension to be connected. This sets the most worker chats one run may open. API workers use the configured provider without opening extra ChatGPT tabs.": "需要连接浏览器扩展。此设置限制一次运行最多打开的子代理聊天数。API 子代理使用已配置的提供商，不会额外打开 ChatGPT 标签页。",
+  "Run sub-agents for parts of the task; their backend is configured in Settings.": "将部分任务交给子代理处理；其运行后端可在设置中配置。"
 }

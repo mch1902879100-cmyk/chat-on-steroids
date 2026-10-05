@@ -5,7 +5,7 @@ import { defaultConfig, initConfigPath, saveConfig } from '../src/main/config.js
 import { initDurableStore, resetDurableForTests } from '../src/main/durable.js';
 import { addProject, assignSessionProject } from '../src/main/projects.js';
 import { createSession, initSessionStore, rebindSession, resetSessionStoreForTests } from '../src/main/session/store.js';
-import { fitSessionPrompt, prepareSessionPrompt } from '../src/main/session/prompt.js';
+import { fitSessionPrompt, prepareSessionPrompt, prepareSkillFollowup } from '../src/main/session/prompt.js';
 import { MAX_CHATGPT_MESSAGE_CHARS, prependUserPrompt, userPromptText } from '../src/shared/user-prompt.js';
 import { makeTempDir, removeTempDir } from './helpers.js';
 
@@ -81,6 +81,27 @@ beforeEach(async () => {
 afterEach(async () => {
   resetSessionStoreForTests(); resetDurableForTests();
   await removeTempDir(directory);
+});
+
+it('refreshes the selected worker backend in existing-chat followups without changing the authored request', async () => {
+  const base = defaultConfig();
+  await saveConfig({
+    ...base,
+    roots: [{ name: 'work', path: directory }],
+    multiAgent: { ...base.multiAgent, enabled: true, workerBackend: 'api', maxWorkers: 3 },
+    goal: { ...base.goal, model: 'glm-5.3-flash' }
+  });
+  const user = 'Continue the release audit';
+  const followup = await prepareSkillFollowup(user, user);
+  expect(userPromptText(followup)).toBe(user);
+  expect(followup).toContain('# Worker backend update');
+  expect(followup).toContain('glm-5.3-flash');
+  expect(followup).toContain('Use agents when it helps this task or the user asks for delegation');
+  expect(followup).not.toContain('default to spawning');
+  expect(followup).toContain('do not open ChatGPT tabs');
+
+  await saveConfig({ ...base, roots: [{ name: 'work', path: directory }] });
+  expect(await prepareSkillFollowup(user, user)).toBe(user);
 });
 
 it('spends only remaining message space on AGENTS.md, including the hidden frame and cutoff notice', () => {

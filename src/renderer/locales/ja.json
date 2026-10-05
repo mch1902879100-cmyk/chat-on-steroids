@@ -1984,5 +1984,10 @@
   "The tunnel disconnected unexpectedly. Open Chat On Steroids to check the connection.": "トンネル接続が予期せず切断されました。Chat On Steroids を開いて接続を確認してください。",
   "Copy link": "リンクをコピー",
   "Copy this chat's ChatGPT link": "このチャットのChatGPTリンクをコピー",
-  "Link copied": "リンクをコピーしました"
+  "Link copied": "リンクをコピーしました",
+  "Sub-agent backend": "サブエージェントのバックエンド",
+  "API workers use the configured Goal provider and model; they do not open ChatGPT tabs. If a provider call fails, the worker stops without switching providers.": "API ワーカーは設定済みの Goal プロバイダーとモデルを使い、ChatGPT タブを開きません。プロバイダー呼び出しに失敗した場合、切り替えずにワーカーを停止します。",
+  "ChatGPT tabs": "ChatGPT タブ",
+  "Needs the browser extension to be connected. This sets the most worker chats one run may open. API workers use the configured provider without opening extra ChatGPT tabs.": "ブラウザー拡張機能の接続が必要です。1回の実行で開けるワーカーチャット数を設定します。API ワーカーは追加の ChatGPT タブを開かず、設定済みのプロバイダーを使います。",
+  "Run sub-agents for parts of the task; their backend is configured in Settings.": "タスクの一部をサブエージェントに任せます。バックエンドは設定で選択します。"
 }

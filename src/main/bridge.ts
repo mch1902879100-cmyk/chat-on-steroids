@@ -186,6 +186,7 @@ import { ownCoreHint,
   workerRevivalDeliveredSince,
   type WorkerRevival
 } from './agents.js';
+import { cancelApiWorkersForRun, startApiWorker } from './api-worker.js';
 import {
   abortContinuation,
   abortContinuationNow,
@@ -5277,7 +5278,10 @@ async function startBridgeOnce(epoch: number, prepared?: PreparedBridge): Promis
   retireInactiveWorkerRecovery();
   dropSpawnRequestListener?.();
   dropSpawnRequestListener = onSpawnRequest((workers) => {
-    for (const worker of workers) queueWorkerBootstrap(worker.id, worker.task, worker.model, worker.reasoningEffort, worker.runId);
+    for (const worker of workers) {
+      if ((getConfig().multiAgent.workerBackend ?? 'chatgpt') === 'api') startApiWorker(worker);
+      else queueWorkerBootstrap(worker.id, worker.task, worker.model, worker.reasoningEffort, worker.runId);
+    }
   });
   // The same replay contract for waking a worker that already has a chat. A run restored
   // from disk can hold a worker left in `waking` by a crash mid-revival; registering here
@@ -5297,6 +5301,7 @@ async function startBridgeOnce(epoch: number, prepared?: PreparedBridge): Promis
   // stop notices once per restart the app had ever done.
   dropSwarmEndListener?.();
   dropSwarmEndListener = onSwarmEnd((reason, _retired, runId) => {
+    cancelApiWorkersForRun(runId);
     // Cancelling the queue stops the worker chats that have not opened yet. The ones
     // already open are not typed into: driving somebody's conversation to tell it to
     // stop is a second control channel, and the app has no business writing into a chat

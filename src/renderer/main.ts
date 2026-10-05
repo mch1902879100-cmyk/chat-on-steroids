@@ -506,7 +506,7 @@ function buildGroups(): void {
 
   const tools = el('div', 'tools');
   const agentTools: Array<[string, string]> = [
-    ['spawn', 'Open worker ChatGPT conversations for parts of the task, on one shared context.'],
+    ['spawn', 'Run sub-agents for parts of the task; their backend is configured in Settings.'],
     ['message', 'Steer one worker or several at once, or report back to prime.'],
     ['status', 'See every worker, and collect messages not yet delivered on a tool result.'],
     ['finish', 'Hand the worker result back to prime and close that slot.']

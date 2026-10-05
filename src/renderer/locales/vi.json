@@ -1984,5 +1984,10 @@
   "The tunnel disconnected unexpectedly. Open Chat On Steroids to check the connection.": "Tunnel bị ngắt kết nối ngoài dự kiến. Mở Chat On Steroids để kiểm tra kết nối.",
   "Copy link": "Sao chép liên kết",
   "Copy this chat's ChatGPT link": "Sao chép liên kết ChatGPT của cuộc trò chuyện này",
-  "Link copied": "Đã sao chép liên kết"
+  "Link copied": "Đã sao chép liên kết",
+  "Sub-agent backend": "Backend của tác nhân phụ",
+  "API workers use the configured Goal provider and model; they do not open ChatGPT tabs. If a provider call fails, the worker stops without switching providers.": "Worker API dùng nhà cung cấp và mô hình Goal đã cấu hình, không mở tab ChatGPT. Nếu lệnh gọi nhà cung cấp thất bại, worker sẽ dừng mà không chuyển sang nhà cung cấp khác.",
+  "ChatGPT tabs": "Tab ChatGPT",
+  "Needs the browser extension to be connected. This sets the most worker chats one run may open. API workers use the configured provider without opening extra ChatGPT tabs.": "Cần kết nối tiện ích mở rộng trình duyệt. Thiết lập số cuộc trò chuyện worker tối đa mỗi lần chạy có thể mở. Worker API dùng nhà cung cấp đã cấu hình mà không mở thêm tab ChatGPT.",
+  "Run sub-agents for parts of the task; their backend is configured in Settings.": "Chạy tác nhân phụ cho một phần công việc; cấu hình backend trong Cài đặt."
 }

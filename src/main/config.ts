@@ -163,6 +163,7 @@ const DEFAULT_GOAL: GoalSettings = {
 // Two workers, not three: three concurrent workers reproducibly trips ChatGPT's rate limit
 // ("too many requests"), which strands the run rather than making it faster.
 const DEFAULT_MULTI_AGENT: MultiAgentSettings = {
+  workerBackend: 'chatgpt',
   enabled: false,
   maxWorkers: 2,
   // Preserve the historical behavior unless the user explicitly opts into a cap shared by
@@ -398,8 +399,9 @@ const configSchema = z.object({
   multiAgent: z
     .object({
       enabled: z.boolean().optional().default(DEFAULT_MULTI_AGENT.enabled),
-    defaultModel: z.string().max(80).optional(),
-    defaultReasoning: z.enum(['', ...REASONING_EFFORTS]).optional(),
+      workerBackend: z.enum(['chatgpt', 'api']).optional().default('chatgpt'),
+      defaultModel: z.string().max(80).optional(),
+      defaultReasoning: z.enum(['', ...REASONING_EFFORTS]).optional(),
       maxWorkers: z.number().int().min(1).max(8).optional().default(DEFAULT_MULTI_AGENT.maxWorkers),
       globalMaxWorkers: z.number().int().min(0).max(64).optional().default(DEFAULT_MULTI_AGENT.globalMaxWorkers ?? 0),
       allowUnattributedCalls: z.boolean().optional().default(DEFAULT_MULTI_AGENT.allowUnattributedCalls),
@@ -409,16 +411,14 @@ const configSchema = z.object({
       endSleepingWorkerProcesses: z.boolean().optional().default(DEFAULT_MULTI_AGENT.endSleepingWorkerProcesses ?? false)
     })
     .optional()
-    .default({
-      enabled: DEFAULT_MULTI_AGENT.enabled,
-      maxWorkers: DEFAULT_MULTI_AGENT.maxWorkers,
+    .default(() => ({
+      ...DEFAULT_MULTI_AGENT,
+      workerBackend: DEFAULT_MULTI_AGENT.workerBackend ?? 'chatgpt',
       globalMaxWorkers: DEFAULT_MULTI_AGENT.globalMaxWorkers ?? 0,
-      allowUnattributedCalls: DEFAULT_MULTI_AGENT.allowUnattributedCalls,
       strictChatAllowlist: DEFAULT_MULTI_AGENT.strictChatAllowlist ?? false,
-      recoverAgentTabs: DEFAULT_MULTI_AGENT.recoverAgentTabs,
       waitForSubAgents: DEFAULT_MULTI_AGENT.waitForSubAgents ?? false,
       endSleepingWorkerProcesses: DEFAULT_MULTI_AGENT.endSleepingWorkerProcesses ?? false
-    }),
+    })),
   // An empty model id is repaired rather than rejected: the id is free text from a
   // provider listing that changes weekly, and a config that lost it must still load with
   // every root and permission in it intact.

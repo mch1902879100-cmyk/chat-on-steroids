@@ -21,6 +21,7 @@ describe('portable browser-backed feature parity', () => {
       expect(config.goal.enabled).toBe(false);
       expect(config.multiAgent).toEqual({
         enabled: true,
+        workerBackend: 'chatgpt',
         maxWorkers: 2,
         globalMaxWorkers: 0,
         allowUnattributedCalls: true,

@@ -129,6 +129,26 @@ describe('the user’s own connector instructions', () => {
     expect(withoutCommands).not.toContain('exec_command runs');
   });
 
+  it('describes the configured API worker backend without requiring delegation', async () => {
+    const previous = getConfig();
+    try {
+      await saveConfig({
+        ...previous,
+        multiAgent: { ...previous.multiAgent, enabled: true, workerBackend: 'api', maxWorkers: 3 },
+        goal: { ...previous.goal, model: 'glm-5.3-flash' }
+      });
+      const text = serverInstructions({ ...ctx, agentTools: true }, 'core', 'win32');
+      expect(text).toContain('configured worker backend is API');
+      expect(text).toContain('glm-5.3-flash');
+      expect(text).toContain('Use agents when it helps the task or the user asks for delegation');
+      expect(text).not.toContain('default to spawning');
+      expect(text).toContain('do not open ChatGPT tabs');
+      expect(text).toContain('API workers are one-shot');
+    } finally {
+      await saveConfig(previous);
+    }
+  });
+
   it('explains the transient ChatGPT safety refusal and offers session_finish to any model', () => {
     // #555: a benign call was blocked once by ChatGPT and succeeded unchanged on retry.
     const text = serverInstructions({ ...ctx, exposedFinishTool: true }, 'core', 'win32');

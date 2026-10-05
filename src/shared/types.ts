@@ -318,6 +318,8 @@ export interface GoalSettings {
  * by accident: several ChatGPT tabs driving the same filesystem is a real risk.
  */
 export interface MultiAgentSettings {
+  /** Fresh worker transport. API reuses the configured Goal/Loop/Plan provider. */
+  workerBackend?: 'chatgpt' | 'api';
   defaultModel?: string;
   defaultReasoning?: ReasoningEffort | '';
   enabled: boolean;

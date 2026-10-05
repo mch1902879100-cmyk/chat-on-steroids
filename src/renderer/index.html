@@ -942,10 +942,11 @@
                 </div>
                 <header class="settings-section-head automation-section-head"><div><h2 class="settings-section-title">Workers & recovery</h2><p>Set worker limits and which chats can resume after interruptions.</p></div></header>
                 <div class="settings-surface pane">
+                  <div class="setting"><span class="setting-text"><b>Sub-agent backend</b><em>API workers use the configured Goal provider and model; they do not open ChatGPT tabs. If a provider call fails, the worker stops without switching providers.</em></span><select id="workerBackend"><option value="chatgpt">ChatGPT tabs</option><option value="api">API provider</option></select></div>
                   <div class="setting">
                     <span class="setting-text">
                       <b id="maWorkersTitle">Sub-agent workers</b>
-                      <em>Needs the browser extension to be connected. This sets the most worker chats one run may open.</em>
+                      <em>Needs the browser extension to be connected. This sets the most worker chats one run may open. API workers use the configured provider without opening extra ChatGPT tabs.</em>
                     </span>
                     <input id="maWorkers" aria-labelledby="maWorkersTitle" class="num" type="number" min="1" max="8" step="1" />
                     <span class="unit">max</span>

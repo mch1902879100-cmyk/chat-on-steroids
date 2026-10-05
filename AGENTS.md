@@ -196,6 +196,7 @@ define the tool/config/wire contract. README and worklogs are secondary and can 
 | Recording | On, 30-day retention. | Explicit Off stays Off; retention still applies to old history. |
 | Context / compaction | Advisory 400,000; limit rounded from advisory × 4/3; auto-compaction on at advisory. | Estimated local units. Automatic execution additionally requires live work, current ownership and eligible model/role. |
 | Multi-agent | On, 2 simultaneous slot-holding workers **per family**, configured hard max 8; global worker admission cap Off (`0`, configurable through 64). | Legacy absent enabled/allow-unattributed fields remain false; an absent global cap remains Off. Existing choices stay exact. |
+| Sub-agent backend | ChatGPT tabs. | Optional API workers use the provider/model selected for Goal, apply the same CoS Core tool permissions and approved roots, and run one-shot without opening browser tabs. Provider/model/key are frozen for each worker run; a provider failure fails that worker and never silently falls back. See §16. |
 | Wait for sub-agents | Off. | When on, a Goal/Loop chat's next automatic step waits for the workers that exact chat started. A chat with no run, or a run with no workers, waits either way. See §16. |
 | Unattributed allowance | True on first launch. | Relaxes ambiguity fences only; known blocked/retired/superseded ownership stays enforced. |
 | Auto-select Skills | Off. | When on, ordinary human-authored input with no explicit Skill directive may select at most one managed/imported Skill whose full id/name/display name is literally present after case and hyphen/whitespace normalization. Ambiguous or unnamed input selects none; explicit `/id` or `/prompt id` always wins. |
@@ -2948,6 +2949,12 @@ Worker model and reasoning belong to the user's saved app settings by default. M
 instructions and the agents schema require omitting each override unless the user explicitly
 requests it; do not ask for those settings merely to spawn. `agents.ts` resolves omitted fields
 from current config at admission, so the executor need not know or repeat their concrete values.
+When the optional API backend is selected, a worker instead uses the configured Goal API endpoint,
+model and reasoning for its whole run; the provider choice and key stay in memory for that run.
+API workers invoke the existing CoS Core tool registrar with the current approved roots and
+capabilities, report once to their prime and free their slot. A provider error fails the worker;
+it does not switch to a ChatGPT tab. ChatGPT remains the default and continues to use the account's
+observed model catalog and reusable browser conversations.
 An exact caller without its own family receives a successful empty `agents status`, regardless
 of other active primes. A permitted unresolved request can likewise inspect its own state and
 start its own family. Missing both exact proof and permitted request identity refuses only that

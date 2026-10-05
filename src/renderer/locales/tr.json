@@ -1984,5 +1984,10 @@
   "The tunnel disconnected unexpectedly. Open Chat On Steroids to check the connection.": "Tünel bağlantısı beklenmedik şekilde kesildi. Bağlantıyı kontrol etmek için Chat On Steroids uygulamasını açın.",
   "Copy link": "Bağlantıyı kopyala",
   "Copy this chat's ChatGPT link": "Bu sohbetin ChatGPT bağlantısını kopyala",
-  "Link copied": "Bağlantı kopyalandı"
+  "Link copied": "Bağlantı kopyalandı",
+  "Sub-agent backend": "Alt ajan arka ucu",
+  "API workers use the configured Goal provider and model; they do not open ChatGPT tabs. If a provider call fails, the worker stops without switching providers.": "API worker’ları yapılandırılmış Goal sağlayıcısını ve modelini kullanır; ChatGPT sekmesi açmaz. Sağlayıcı çağrısı başarısız olursa başka sağlayıcıya geçmeden durur.",
+  "ChatGPT tabs": "ChatGPT sekmeleri",
+  "Needs the browser extension to be connected. This sets the most worker chats one run may open. API workers use the configured provider without opening extra ChatGPT tabs.": "Tarayıcı uzantısının bağlı olması gerekir. Bir çalıştırmada açılabilecek en fazla worker sohbetini belirler. API worker’ları ek ChatGPT sekmesi açmadan yapılandırılmış sağlayıcıyı kullanır.",
+  "Run sub-agents for parts of the task; their backend is configured in Settings.": "Görevin bazı kısımlarını alt ajanlara verin; arka uçları Ayarlar’dan yapılandırılır."
 }

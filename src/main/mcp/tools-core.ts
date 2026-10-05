@@ -1208,15 +1208,39 @@ async function acceptAgentMutation(
   }
 }
 
+function apiWorkerBackendSelected(): boolean {
+  return (getConfig().multiAgent.workerBackend ?? 'chatgpt') === 'api';
+}
+
+function legacyBrowserWorker(info: { conversationId: string | null }): boolean {
+  return apiWorkerBackendSelected() && Boolean(info.conversationId) && !info.conversationId!.startsWith('api-worker:');
+}
+
+function agentsToolDescription(): string {
+  const config = getConfig();
+  if ((config.multiAgent.workerBackend ?? 'chatgpt') === 'chatgpt') {
+    return 'Run ChatGPT workers. Omit model and reasoning_effort unless the user explicitly requests an override; saved app defaults apply. Do not ask the user to choose them. Reuse a suitable sleeping worker with message before spawn. ' +
+      'message: prime↔worker. Reports ride tool results, never restart primes. Use status once to collect pending reports before finalizing; otherwise state that review is pending. Never poll repeatedly. ' +
+      'status: your active, sleeping/revivable and terminal workers, including parked families. finish: record the report, then normally sleep.';
+  }
+  return `Run one-shot API workers through the configured provider/model (${config.goal.model}); they do not open ChatGPT tabs. ` +
+    'Use the tool when it helps the task or the user asks for delegation; do not spawn workers only because they are available. Omit model and reasoning_effort unless the user explicitly requests an override; saved settings apply. ' +
+    'message: prime↔worker. Reports ride tool results, never restart primes. Use status once to collect pending reports before finalizing; otherwise state that review is pending. Never poll repeatedly. ' +
+    'status: your active, sleeping/revivable and terminal workers, including parked families. finish: record the report, then normally sleep.';
+}
+
+function agentSpawnDescription(): string {
+  return apiWorkerBackendSelected()
+    ? 'spawn: starts fresh, one-shot API workers using the configured provider/model; legacy sleeping ChatGPT workers cannot be revived in API mode.'
+    : 'spawn: fresh workers to create only after checking status for a suitable sleeping worker; revive one explicitly with message.';
+}
+
 function registerAgentsTool(reg: SurfaceRegistrar): void {
   reg.register(
     'agents',
     toolDeclaration('agents', () => ({
       title: 'Multi-agent run',
-      description:
-        'Run ChatGPT workers. Omit model and reasoning_effort unless the user explicitly requests an override; saved app defaults apply. Do not ask the user to choose them. Reuse a suitable sleeping worker with message before spawn. ' +
-        'message: prime↔worker. Reports ride tool results, never restart primes. Use status once to collect pending reports before finalizing; otherwise state that review is pending. Never poll repeatedly. ' +
-        'status: your active, sleeping/revivable and terminal workers, including parked families. finish: record the report, then normally sleep.',
+      description: agentsToolDescription(),
       inputSchema: z.object({
         action: z.enum(['spawn', 'message', 'status', 'finish']).describe('What to do.'),
         run_id: z.string().uuid().optional().describe('Select your returned worker family when status lists several; never grants another caller’s workers.'),
@@ -1243,22 +1267,24 @@ function registerAgentsTool(reg: SurfaceRegistrar): void {
                 .max(80)
                 .optional()
                 .describe(
-                  'Omit unless explicitly requested by the user; app settings supply defaults. Use an exact account-observed model id or provider alias. Invalid overrides return observed ids before opening; the browser confirms availability before Send.'
+                  apiWorkerBackendSelected()
+                    ? 'API workers use the configured API provider/model. This ChatGPT-only override is ignored while the API backend is selected.'
+                    : 'Omit unless explicitly requested by the user; app settings supply defaults. Use an exact account-observed model id or provider alias. Invalid overrides return observed ids before opening; the browser confirms availability before Send.'
                 ),
               reasoning_effort: z
                 .enum(REASONING_EFFORTS)
                 .optional()
                 .describe(
-                  'Omit unless explicitly requested by the user; app settings supply defaults. Do not ask just to spawn a worker. This selects reasoning only, never a model.'
+                  apiWorkerBackendSelected()
+                    ? 'API workers use the reasoning level configured with the API provider/model. This ChatGPT-only override is ignored while the API backend is selected.'
+                    : 'Omit unless explicitly requested by the user; app settings supply defaults. Do not ask just to spawn a worker. This selects reasoning only, never a model.'
                 )
             }).strict()
           )
           .min(1)
           .max(8)
           .optional()
-          .describe(
-            'spawn: fresh workers to create only after checking status for a suitable sleeping worker; revive one explicitly with message.'
-          ),
+          .describe(agentSpawnDescription()),
         messages: z
           .array(
             z.object({
@@ -1337,8 +1363,9 @@ function registerAgentsTool(reg: SurfaceRegistrar): void {
             'The worker run could not cross its durable acceptance barrier. The spawn was rolled back; retry this same request.');
           const { created, becamePrime, runId, defaultNotes } = staged;
           if (currentCall()) currentCall()!.caller.runId = runId;
-          // Browser tabs are a publication side effect, never part of planning. They become
-          // visible only after the exact broker revision above is durable.
+          // Worker execution is a publication side effect, never part of planning. It starts
+          // only after the exact broker revision above is durable. The bridge selects either
+          // the browser transport or the in-process API worker backend.
           requestWorkerBootstraps(created.map((worker) => worker.id), runId);
           await adoptAgent(PRIME_ID);
           const invited = created.filter((worker) => worker.state === 'invited');
@@ -1350,7 +1377,11 @@ function registerAgentsTool(reg: SurfaceRegistrar): void {
                 text:
                   (becamePrime ? `This ${currentCaller().conversationId ? 'conversation' : 'request'} is now the prime agent of run ${runId}. ` : '') +
                   `${created.length} worker(s) matched: ${created.map((info) => `${info.id} (${info.label}, ${info.state}${info.model ? `, model ${info.model}` : ''}${info.reasoningEffort ? `, reasoning ${info.reasoningEffort}` : ''})`).join(', ')}. ` +
-                  (invited.length > 0 ? 'New worker chats are opening with their briefs already in them. ' : '') +
+                  (invited.length > 0
+                    ? (apiWorkerBackendSelected()
+                      ? `API workers are starting with ${getConfig().goal.model}; no extra ChatGPT tabs are opened. `
+                      : 'New worker chats are opening with their briefs already in them. ')
+                    : '') +
                   (defaultNotes?.length ? `${defaultNotes.join(' ')} ` : '') +
                   (sleeping.length > 0
                     ? `${sleeping.map((worker) => worker.id).join(', ')} already finished that earlier piece and is sleeping in its existing chat; wake it with action=message instead of spawning a duplicate. `
@@ -1418,6 +1449,21 @@ function registerAgentsTool(reg: SurfaceRegistrar): void {
           // Before any slot is reserved: a sleeping worker whose chat has since crossed the
           // context ceiling is not revivable, and this is the call that would otherwise wake it.
           const caller = await callerNow(startedAt, { runId: input.run_id, member: true });
+          if (apiWorkerBackendSelected()) {
+            const state = swarmStateForCaller(caller);
+            const legacySleeping = new Set(
+              state.agents
+                .filter((info) => info.role === 'worker' && info.state === 'sleeping' && info.revivable && legacyBrowserWorker(info))
+                .map((info) => info.id)
+            );
+            const legacyTarget = items.find((item) => legacySleeping.has(item.to));
+            if (legacyTarget) {
+              return fail(
+                `API_WORKER_BACKEND: ${legacyTarget.to} is a retained ChatGPT worker from an older run. ` +
+                'It will not be revived while API worker backend is selected. Spawn a fresh API worker instead.'
+              );
+            }
+          }
           await measureSleepingWorkers(caller);
           // One call, one identity resolution, one all-or-nothing delivery: a prime
           // redirecting its whole run cannot end up with two of its three messages sent.
@@ -1511,17 +1557,19 @@ function registerAgentsTool(reg: SurfaceRegistrar): void {
         // A sleeping worker is not a spent one, and calling it finished in this table is what
         // sends a prime off to spawn a fourth chat for work its first worker already knows the
         // background to.
-        const shown = (info: { state: string; revivable: boolean }): string =>
+        const shown = (info: { state: string; revivable: boolean; conversationId: string | null }): string =>
           info.state === 'sleeping'
-            ? info.revivable
-              ? 'sleeping (reusable; wake with action=message)'
-              : 'sleeping'
+            ? legacyBrowserWorker(info)
+              ? 'sleeping (legacy ChatGPT history; not reusable while API backend is selected)'
+              : info.revivable
+                ? 'sleeping (reusable; wake with action=message)'
+                : 'sleeping'
             : info.state === 'waking'
               ? 'waking (your message is being delivered to its chat)'
               : info.state === 'finished'
                 ? 'finished (not reusable)'
               : info.state;
-        const asleep = state.agents.filter((info) => info.state === 'sleeping' && info.revivable);
+        const asleep = state.agents.filter((info) => info.state === 'sleeping' && info.revivable && !legacyBrowserWorker(info));
         const slots = status.freeWorkerSlots;
         return {
           content: [
@@ -1574,7 +1622,7 @@ function registerAgentsTool(reg: SurfaceRegistrar): void {
               model: info.model,
               reasoning_effort: info.reasoningEffort,
               state: info.state,
-              revivable: info.revivable,
+              revivable: legacyBrowserWorker(info) ? false : info.revivable,
               waiting: info.pending,
               result: info.result ?? null
             }))

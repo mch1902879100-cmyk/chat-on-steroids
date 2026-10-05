@@ -1984,5 +1984,10 @@
   "The tunnel disconnected unexpectedly. Open Chat On Steroids to check the connection.": "El túnel se desconectó inesperadamente. Abre Chat On Steroids para comprobar la conexión.",
   "Copy link": "Copiar enlace",
   "Copy this chat's ChatGPT link": "Copiar el enlace de ChatGPT de este chat",
-  "Link copied": "Enlace copiado"
+  "Link copied": "Enlace copiado",
+  "Sub-agent backend": "Backend de subagentes",
+  "API workers use the configured Goal provider and model; they do not open ChatGPT tabs. If a provider call fails, the worker stops without switching providers.": "Los workers de API usan el proveedor y el modelo configurados para Goal; no abren pestañas de ChatGPT. Si falla una llamada al proveedor, el worker se detiene sin cambiar de proveedor.",
+  "ChatGPT tabs": "Pestañas de ChatGPT",
+  "Needs the browser extension to be connected. This sets the most worker chats one run may open. API workers use the configured provider without opening extra ChatGPT tabs.": "Necesita la extensión del navegador conectada. Define el máximo de chats de workers que puede abrir una ejecución. Los workers de API usan el proveedor configurado sin abrir pestañas adicionales de ChatGPT.",
+  "Run sub-agents for parts of the task; their backend is configured in Settings.": "Ejecutar subagentes para partes de la tarea; su backend se configura en Ajustes."
 }

@@ -137,6 +137,7 @@ interface Deps {
 
 let deps: Deps;
 let visible = false;
+let pendingWorkerBackend: Config['multiAgent']['workerBackend'] | null = null;
 
 let sessions: SessionSummary[] = [];
 let pressure = new Map<string, TokenPressure>();
@@ -4513,6 +4514,7 @@ export function chatSettingsPatch(current: Config): {
         : DEFAULT_HANDOFF_LENGTH
     },
     multiAgent: {
+      workerBackend: pendingWorkerBackend ?? $<HTMLSelectElement>('workerBackend').value as Config['multiAgent']['workerBackend'],
       defaultModel: $<HTMLSelectElement>('workerModel').value,
       defaultReasoning: $<HTMLSelectElement>('workerReasoning').value as Config['multiAgent']['defaultReasoning'],
       // The exposure switch lives with every other ChatGPT tool switch, on Home. Settings owns
@@ -4917,7 +4919,7 @@ const CHAT_INPUTS = [
   'chatBrowser', 'browserBridgePort',
   'goalIncludeToolCalls',
   'planBackend',
-  'finishTool', 'finishLeadMinutes', 'defaultChatModel', 'defaultChatReasoning', 'workerModel', 'workerReasoning', 'autoSelectSkills', 'backgroundChats', 'browserOnly', 'autoRefreshPlugins',
+  'finishTool', 'finishLeadMinutes', 'defaultChatModel', 'defaultChatReasoning', 'workerModel', 'workerReasoning', 'workerBackend', 'autoSelectSkills', 'backgroundChats', 'browserOnly', 'autoRefreshPlugins',
   'goalBackend',
   'loopBackend',
   'helperModel', 'helperReasoning',
@@ -4973,6 +4975,13 @@ export function chatApply(state: AppState, previous?: Config): void {
     String(config.multiAgent.globalMaxWorkers ?? 0),
     previous?.multiAgent.globalMaxWorkers
   );
+  if (pendingWorkerBackend && config.multiAgent.workerBackend === pendingWorkerBackend) pendingWorkerBackend = null;
+  const effectiveWorkerBackend = pendingWorkerBackend ?? config.multiAgent.workerBackend ?? 'chatgpt';
+  applyChatValue(
+    $<HTMLSelectElement>('workerBackend'),
+    effectiveWorkerBackend,
+    previous?.multiAgent.workerBackend
+  );
   applyChatChecked(
     $<HTMLInputElement>('allowUnattributedCalls'),
     config.multiAgent.allowUnattributedCalls,
@@ -5004,6 +5013,8 @@ export function chatApply(state: AppState, previous?: Config): void {
   applyChatValue($<HTMLSelectElement>('workerReasoning'), config.multiAgent.defaultReasoning ?? '', previous?.multiAgent.defaultReasoning);
   applyChatValue($<HTMLSelectElement>('defaultChatModel'), config.ui.defaultChatModel ?? '', previous?.ui.defaultChatModel);
   applyChatValue($<HTMLSelectElement>('defaultChatReasoning'), config.ui.defaultChatReasoning ?? '', previous?.ui.defaultChatReasoning);
+  $<HTMLSelectElement>('workerModel').disabled = effectiveWorkerBackend === 'api';
+  $<HTMLSelectElement>('workerReasoning').disabled = effectiveWorkerBackend === 'api';
   applyChatValue($<HTMLSelectElement>('goalBackend'), config.goal.backend ?? 'chatgpt', previous?.goal.backend);
   applyChatValue($<HTMLSelectElement>('loopBackend'), config.goal.loopBackend ?? 'chatgpt', previous?.goal.loopBackend);
   applyChatValue($<HTMLSelectElement>('helperModel'), config.goal.helperModel ?? 'gpt-5.6-sol', previous?.goal.helperModel);
@@ -6238,6 +6249,19 @@ export function initChat(next: Deps): void {
   });
 
   for (const id of CHAT_INPUTS) {
+    if (id === 'workerBackend') {
+      $(id).addEventListener('change', () => {
+        pendingWorkerBackend = $<HTMLSelectElement>(id).value as Config['multiAgent']['workerBackend'];
+        void deps.save().then(() => {
+          const committed = deps.state()?.config.multiAgent.workerBackend ?? 'chatgpt';
+          if (committed !== pendingWorkerBackend) {
+            pendingWorkerBackend = null;
+            $<HTMLSelectElement>(id).value = committed;
+          }
+        });
+      });
+      continue;
+    }
     $(id).addEventListener('change', () => void deps.save());
   }
 

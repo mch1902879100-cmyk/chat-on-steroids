@@ -18,6 +18,17 @@ const cutNotice = '\n\n[Cut off because of the message limit. Read AGENTS.md you
 const promptFolder = (scope: PromptScope) => scope.sessionId ? getSessionProject(scope.sessionId)
   : scope.projectId ? projectWorkspace(scope.projectId) : Promise.resolve(null);
 
+/** Existing chats do not receive opening instructions again after the backend changes. */
+function workerBackendFollowupInstructions(): string {
+  const config = getConfig();
+  if (!config.multiAgent.enabled || (config.multiAgent.workerBackend ?? 'chatgpt') !== 'api') return '';
+  return [
+    '# Worker backend update',
+    `Workers use the configured API provider/model (${config.goal.model}) inside CoS and do not open ChatGPT tabs. They are one-shot; do not revive retained browser workers.`,
+    'Use agents when it helps this task or the user asks for delegation; do not spawn workers only because they are available.'
+  ].join('\n');
+}
+
 /** One selected folder, never cwd inference, global discovery or a recursive document scan. */
 async function projectInstructions(scope: PromptScope): Promise<ProjectInstructions | null> {
   if (!scope.sessionId && !scope.projectId) return null;
@@ -132,5 +143,6 @@ export async function prepareSkillFollowup(text: string, authored: string, budge
   const folder = await promptFolder(scope);
   const skills = await selectedSkillInstructions(authored, { projectPath: folder?.real ?? null }, undefined, scope.autoSkills);
   if ((await promptFolder(scope))?.real !== folder?.real) throw new Error('The selected project changed during Skill preparation');
-  return skills.length ? fitSessionPrompt(text, '', null, budget, skills) : text;
+  const workerBackend = workerBackendFollowupInstructions();
+  return skills.length || workerBackend ? fitSessionPrompt(text, workerBackend, null, budget, skills) : text;
 }

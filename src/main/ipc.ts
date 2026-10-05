@@ -239,6 +239,7 @@ const settingsPatch = z.object({
   }),
   multiAgent: z.object({
     enabled: z.boolean(),
+    workerBackend: z.enum(['chatgpt', 'api']).optional(),
     defaultModel: z.string().max(80).optional(),
     defaultReasoning: z.enum(['', ...REASONING_EFFORTS]).optional(),
     maxWorkers: z.number().int().min(1).max(8),
@@ -418,6 +419,7 @@ function mergeSettings(current: Config, base: SettingsSnapshot, wanted: Settings
       )
     },
     multiAgent: {
+      workerBackend: pick(current.multiAgent.workerBackend, base.multiAgent.workerBackend, wanted.multiAgent.workerBackend),
       defaultModel: pick(current.multiAgent.defaultModel, base.multiAgent.defaultModel, wanted.multiAgent.defaultModel),
       defaultReasoning: pick(current.multiAgent.defaultReasoning, base.multiAgent.defaultReasoning, wanted.multiAgent.defaultReasoning),
       enabled: pick(current.multiAgent.enabled, base.multiAgent.enabled, wanted.multiAgent.enabled),
